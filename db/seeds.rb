@@ -21,5 +21,9 @@ movies = [{ title: 'Aladdin', rating: 'G', release_date: '25-Nov-1992' },
           { title: 'Chicken Run', rating: 'G', release_date: '21-Jun-2000' }]
 
 movies.each do |movie|
-  Movie.create!(movie)
+  Movie.find_or_create_by!(
+    title: movie[:title],
+    rating: movie[:rating],
+    release_date: movie[:release_date]
+  )
 end
