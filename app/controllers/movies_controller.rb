@@ -4,12 +4,20 @@ class MoviesController < ApplicationController
   # GET /movies or /movies.json
   def index
     @all_ratings = Movie.all_ratings
-    ratings = params[:ratings]
-    @ratings_to_show = ratings.respond_to?(:keys) ? ratings.keys & @all_ratings : []
-    @ratings_to_show = @all_ratings if @ratings_to_show.empty?
-    @ratings_params = @ratings_to_show.index_with { "1" }
-    @sort_by = %w[title release_date].include?(params[:sort_by]) ? params[:sort_by] : "title"
     
+    @sort_by = params.key?(:sort_by) ? requested_sort_by : saved_sort_by
+    @ratings_to_show = if params.key?(:ratings)
+      requested_ratings
+    elsif params.key?(:sort_by)
+      # The form omits ratings entirely when every checkbox is unchecked.
+      @all_ratings
+    else
+      saved_ratings
+    end
+
+    session[:movie_sort_by] = @sort_by
+    session[:movie_ratings] = @ratings_to_show
+    @ratings_params = @ratings_to_show.index_with { "1" }
     @movies = Movie.with_ratings(@ratings_to_show).order_by(@sort_by)
   end
 
@@ -65,6 +73,31 @@ class MoviesController < ApplicationController
   end
 
   private
+    def requested_sort_by
+      %w[title release_date].include?(params[:sort_by]) ? params[:sort_by] : "title"
+    end
+
+
+    def saved_sort_by
+      %w[title release_date].include?(session[:movie_sort_by]) ? session[:movie_sort_by] : "title"
+    end
+
+
+    def requested_ratings
+      ratings = params[:ratings]
+      selected_ratings = ratings.respond_to?(:keys) ? ratings.keys & @all_ratings : []
+
+      selected_ratings.presence || @all_ratings
+    end
+
+
+    def saved_ratings
+      ratings = session[:movie_ratings]
+      selected_ratings = ratings.is_a?(Array) ? ratings & @all_ratings : []
+      
+      selected_ratings.presence || @all_ratings
+    end
+
     # Use callbacks to share common setup or constraints between actions.
     def set_movie
       @movie = Movie.find(params[:id])
